@@ -130,17 +130,17 @@ namespace cycfi::elements
                auto hit = c->hit_element(cctx, btn.pos, false);
                if (hit.element_ptr)
                {
-                  if (_multi_select && (btn.modifiers & mod_shift))
-                  {
-                     // Process shift-select
-                     if (btn.down)
-                        r = shift_select(*c, hit, _hook);
-                  }
-                  else if (_multi_select && (btn.modifiers & mod_action))
+                  if (_multi_select && (btn.modifiers & mod_action))
                   {
                      // Process action-select
                      if (btn.down)
                         r = multi_select(*c, hit, _hook);
+                  }
+                  else if (_multi_select && (btn.modifiers & mod_shift))
+                  {
+                     // Process shift-select
+                     if (btn.down)
+                        r = shift_select(*c, hit, _hook);
                   }
                   else
                   {
@@ -164,6 +164,26 @@ namespace cycfi::elements
    bool selection_list_element::key(context const& ctx, key_info k)
    {
       bool r = base_type::key(ctx, k);
+      if (k.action == key_action::press || k.action == key_action::repeat)
+      {
+         switch (k.key)
+         {
+            case key_code::a:
+               if (k.modifiers & mod_action)
+               {
+                  if (auto c = find_subject<composite_base*>(this))
+                  {
+                     detail::select_all(*c);
+                     ctx.view.refresh();
+                     return true;
+                  }
+               }
+               break;
+
+            default:
+               break;
+         }
+      }
       return r;
    }
 
