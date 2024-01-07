@@ -10,7 +10,7 @@
 
 namespace cycfi::elements
 {
-   namespace
+   namespace detail
    {
       std::vector<std::size_t> get_selected(composite_base const& c)
       {
@@ -37,7 +37,7 @@ namespace cycfi::elements
          }
       }
 
-      void unselect_all(composite_base const& c)
+      void select_none(composite_base const& c)
       {
          for (std::size_t i = 0; i != c.size(); ++i)
          {
@@ -46,11 +46,20 @@ namespace cycfi::elements
          }
       }
 
+      void select_all(composite_base const& c)
+      {
+         for (std::size_t i = 0; i != c.size(); ++i)
+         {
+            if (auto e = find_element<selectable*>(&c.at(i)))
+               e->select(true);
+         }
+      }
+
       bool select(composite_base const& c, composite_base::hit_info const& hit, int& hook)
       {
          if (auto e = find_element<selectable*>(hit.element_ptr))
          {
-            unselect_all(c);
+            select_none(c);
             e->select(true);
             hook = hit.index;
             return true;
@@ -86,7 +95,6 @@ namespace cycfi::elements
          return false;
       }
 
-
       bool shift_select(composite_base const& c, composite_base::hit_info const& hit, int hook)
       {
          if (auto e = find_element<selectable*>(hit.element_ptr))
@@ -94,7 +102,7 @@ namespace cycfi::elements
             hook = std::max(hook, 0);
             auto from = std::min(hook, hit.index);
             auto to = std::max(hook, hit.index);
-            unselect_all(c);
+            select_none(c);
 
             for (int i = from; i <= to; ++i)
             {
@@ -106,6 +114,8 @@ namespace cycfi::elements
          return false;
       }
    }
+
+   using namespace detail;
 
    bool selection_list_element::click(context const& ctx, mouse_button btn)
    {
@@ -142,7 +152,7 @@ namespace cycfi::elements
                if (r && _hook)
                {
                   ctx.view.refresh(ctx.bounds);
-                  on_select();
+                  on_select(_hook);
                }
             }
          );
@@ -173,6 +183,25 @@ namespace cycfi::elements
    int selection_list_element::get_hook() const
    {
       return _hook;
+   }
+
+   void selection_list_element::select_all()
+   {
+      if (auto c = find_subject<composite_base*>(this))
+      {
+         detail::select_all(*c);
+         on_select(_hook);
+      }
+   }
+
+   void selection_list_element::select_none()
+   {
+      if (auto c = find_subject<composite_base*>(this))
+      {
+         detail::select_none(*c);
+         _hook = -1;
+         on_select(_hook);
+      }
    }
 }
 
