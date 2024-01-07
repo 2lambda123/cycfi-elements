@@ -45,6 +45,66 @@ namespace cycfi::elements
                e->select(false);
          }
       }
+
+      bool select(composite_base const& c, composite_base::hit_info const& hit, int& hook)
+      {
+         if (auto e = find_element<selectable*>(hit.element_ptr))
+         {
+            unselect_all(c);
+            e->select(true);
+            hook = hit.index;
+            return true;
+         }
+         return false;
+      }
+
+      std::size_t count_selected(composite_base const& c)
+      {
+         std::size_t n = 0;
+         for (std::size_t i = 0; i != c.size(); ++i)
+         {
+            if (auto e = find_element<selectable*>(&c.at(i)))
+            {
+               if (e->is_selected())
+                  ++n;
+            }
+         }
+         return n;
+      }
+
+      bool multi_select(composite_base const& c, composite_base::hit_info const& hit, int& hook)
+      {
+         if (auto e = find_element<selectable*>(hit.element_ptr))
+         {
+            e->select(!e->is_selected());
+            if (e->is_selected())
+               hook = e->is_selected()? hit.index : -1;
+            if (count_selected(c) == 0)
+               hook = -1;
+            return true;
+         }
+         return false;
+      }
+
+
+      bool shift_select(composite_base const& c, composite_base::hit_info const& hit, int hook)
+      {
+         if (auto e = find_element<selectable*>(hit.element_ptr))
+         {
+            hook = std::max(hook, 0);
+            auto from = std::min(hook, hit.index);
+            auto to = std::max(hook, hit.index);
+            unselect_all(c);
+
+            for (int i = from; i <= to; ++i)
+            {
+               if (auto e = find_element<selectable*>(&c.at(i)))
+                  e->select(true);
+            }
+            return true;
+         }
+         return false;
+      }
    }
 
    bool selection_list_element::click(context const& ctx, mouse_button btn)
@@ -59,44 +119,30 @@ namespace cycfi::elements
                auto hit = c->hit_element(cctx, btn.pos, false);
                if (hit.element_ptr)
                {
-                  if (btn.down && _multi_select && (btn.modifiers & mod_shift))
+                  if (_multi_select && (btn.modifiers & mod_shift))
                   {
                      // Process shift-select
-                     r = true;
+                     if (btn.down)
+                        r = shift_select(*c, hit, _hook);
                   }
                   else if (_multi_select && (btn.modifiers & mod_action))
                   {
+                     // Process action-select
                      if (btn.down)
-                     {
-                        // Process action-select
-                        if (auto e = find_element<selectable*>(hit.element_ptr))
-                        {
-                           e->select(!e->is_selected());
-                           r = true;
-                           if (e->is_selected())
-                              _hook = hit.index;
-                        }
-                     }
+                        r = multi_select(*c, hit, _hook);
                   }
                   else
                   {
                      // Process select
-                     if (auto e = find_element<selectable*>(hit.element_ptr))
-                     {
-                        if (!btn.down)
-                        {
-                           unselect_all(*c);
-                           e->select(true);
-                           _hook = hit.index;
-                        }
-                        r = true;
-                     }
+                     if (!btn.down)
+                        select(*c, hit, _hook);
+                     r = true;
                   }
                }
-               if (r)
+               if (r && _hook)
                {
                   ctx.view.refresh(ctx.bounds);
-                  on_select(_hook);
+                  on_select();
                }
             }
          );
@@ -122,6 +168,11 @@ namespace cycfi::elements
    {
       if (auto c = find_subject<composite_base*>(this))
          return set_selected(*c, selection);
+   }
+
+   int selection_list_element::get_hook() const
+   {
+      return _hook;
    }
 }
 
