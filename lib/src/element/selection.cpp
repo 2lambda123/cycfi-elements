@@ -290,9 +290,14 @@ namespace cycfi::elements
                if (auto c = find_subject<composite_base*>(this))
                {
                   if (_select_start == -1)
+                  {
                      select_last(*c, _select_start, _select_end);
+                  }
                   else
-                     select_prev(*c, _select_start, _select_end, k.modifiers & mod_shift);
+                  {
+                     auto extend = _multi_select && (k.modifiers & mod_shift);
+                     select_prev(*c, _select_start, _select_end, extend);
+                  }
                   if (_select_end != -1)
                   {
                      in_context_do(ctx, *c,
@@ -313,9 +318,14 @@ namespace cycfi::elements
                if (auto c = find_subject<composite_base*>(this))
                {
                   if (_select_start == -1)
+                  {
                      select_first(*c, _select_start, _select_end);
+                  }
                   else
-                     select_next(*c, _select_start, _select_end, k.modifiers & mod_shift);
+                  {
+                     auto extend = _multi_select && (k.modifiers & mod_shift);
+                     select_next(*c, _select_start, _select_end, extend);
+                  }
                   if (_select_end != -1)
                   {
                      in_context_do(ctx, *c,
