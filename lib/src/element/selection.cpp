@@ -1,5 +1,5 @@
 /*=================================================================================================
-   Copyright (c) 2016-2023 Joel de Guzman
+   Copyright (c) 2016-2024 Joel de Guzman
 
    Distributed under the MIT License [ https://opensource.org/licenses/MIT ]
 =================================================================================================*/
@@ -7,7 +7,6 @@
 #include <elements/element/composite.hpp>
 #include <elements/element/traversal.hpp>
 #include <elements/view.hpp>
-#include <infra/assert.hpp>
 
 namespace cycfi::elements
 {
@@ -29,9 +28,10 @@ namespace cycfi::elements
 
       void set_selected(composite_base& c, std::vector<std::size_t> const selection)
       {
-         CYCFI_ASSERT(selection.size() == c.size(), "Error: Mismatched size.");
-         for (std::size_t i = 0; i != c.size(); ++i)
+         for (std::size_t i : selection)
          {
+            if (i > c.size())
+               continue; // Ignore out of bounds indices
             if (auto e = find_element<selectable*>(&c.at(i)))
                e->select(selection[i]);
          }
