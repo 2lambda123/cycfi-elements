@@ -57,13 +57,29 @@ namespace cycfi::elements
          }
       }
 
-      bool select(composite_base const& c, composite_base::hit_info const& hit, int& hook)
+      void select(
+         composite_base const& c
+       , selectable* e
+       , std::size_t index
+       , int& _select_start
+       , int& _select_end
+      )
+   {
+         select_none(c);
+         e->select(true);
+         _select_start = _select_end = index;
+      }
+
+      bool select(
+         composite_base const& c
+       , composite_base::hit_info const& hit
+       , int& _select_start
+       , int& _select_end
+      )
       {
          if (auto e = find_element<selectable*>(hit.element_ptr))
          {
-            select_none(c);
-            e->select(true);
-            hook = hit.index;
+            select(c, e, hit.index, _select_start, _select_end);
             return true;
          }
          return false;
@@ -83,90 +99,124 @@ namespace cycfi::elements
          return n;
       }
 
-      bool multi_select(composite_base const& c, composite_base::hit_info const& hit, int& hook)
+      bool multi_select(
+         composite_base const& c
+       , composite_base::hit_info const& hit
+       , int& _select_start
+       , int& _select_end
+      )
       {
          if (auto e = find_element<selectable*>(hit.element_ptr))
          {
             e->select(!e->is_selected());
             if (e->is_selected())
-               hook = e->is_selected()? hit.index : -1;
+               _select_start = _select_end = e->is_selected()? hit.index : -1;
             if (count_selected(c) == 0)
-               hook = -1;
+               _select_start = _select_end = -1;
             return true;
          }
          return false;
       }
 
-      bool shift_select(composite_base const& c, composite_base::hit_info const& hit, int hook)
+      void shift_select(
+         composite_base const& c
+       , std::size_t index
+       , int const _select_start
+       , int& _select_end
+      )
+      {
+         auto start = std::max(_select_start, 0);
+         auto end = std::max(_select_end, 0);
+         auto from = std::min(start, end);
+         auto to = std::max(start, end);
+
+         for (int i = from; i <= to; ++i)
+         {
+            if (auto e = find_element<selectable*>(&c.at(i)))
+               e->select(false);
+         }
+
+         from = std::min<std::size_t>(start, index);
+         to = std::max<std::size_t>(start, index);
+
+         for (int i = from; i <= to; ++i)
+         {
+            if (auto e = find_element<selectable*>(&c.at(i)))
+               e->select(true);
+         }
+         _select_end = index;
+      }
+
+      bool shift_select(
+         composite_base const& c
+       , composite_base::hit_info const& hit
+       , int const _select_start
+       , int& _select_end
+      )
       {
          if (auto e = find_element<selectable*>(hit.element_ptr))
          {
-            hook = std::max(hook, 0);
-            auto from = std::min(hook, hit.index);
-            auto to = std::max(hook, hit.index);
-            select_none(c);
-
-            for (int i = from; i <= to; ++i)
-            {
-               if (auto e = find_element<selectable*>(&c.at(i)))
-                  e->select(true);
-            }
+            shift_select(c, hit.index, _select_start, _select_end);
             return true;
          }
          return false;
       }
 
-      void select_first(composite_base const& c, int& hook)
+      void select_first(
+         composite_base const& c
+       , int& _select_start
+       , int& _select_end
+      )
       {
-         // We assume that there is no selection to reset
          if (c.size())
          {
             if (auto e = find_element<selectable*>(&c.at(0)))
-            {
-               e->select(true);
-               hook = 0;
-            }
+               select(c, e, 0, _select_start, _select_end);
          }
       }
 
-      void select_last(composite_base const& c, int& hook)
+      void select_last(
+         composite_base const& c
+       , int& _select_start
+       , int& _select_end
+      )
       {
-         // We assume that there is no selection to reset
          if (c.size())
          {
             if (auto e = find_element<selectable*>(&c.at(c.size()-1)))
-            {
-               e->select(true);
-               hook = c.size()-1;
-            }
+               select(c, e, c.size()-1, _select_start, _select_end);
          }
       }
 
-      void select_next(composite_base const& c, int& hook, bool shift)
+      void select_next(
+         composite_base const& c
+       , int& _select_start
+       , int& _select_end
+       , bool shift
+      )
       {
-         if ((hook+1) < c.size())
+         if ((_select_end+1) < int(c.size()))
          {
-            if (auto e = find_element<selectable*>(&c.at(hook+1)))
-            {
-               if (!shift)
-                  select_none(c);
-               e->select(true);
-               ++hook;
-            }
+            if (shift)
+               shift_select(c, _select_end+1, _select_start, _select_end);
+            else if (auto e = find_element<selectable*>(&c.at(_select_end+1)))
+               select(c, e, _select_end+1, _select_start, _select_end);
          }
       }
 
-      void select_prev(composite_base const& c, int& hook, bool shift)
+      void select_prev(
+         composite_base const& c
+       , int& _select_start
+       , int& _select_end
+       , bool shift
+      )
       {
-         if ((hook-1) >= 0)
+         if ((_select_end-1) >= 0)
          {
-            if (auto e = find_element<selectable*>(&c.at(hook-1)))
-            {
-               if (!shift)
-                  select_none(c);
-               e->select(true);
-               --hook;
-            }
+            if (shift)
+               shift_select(c, _select_end-1, _select_start, _select_end);
+            else if (auto e = find_element<selectable*>(&c.at(_select_end-1)))
+               select(c, e, _select_end-1, _select_start, _select_end);
          }
       }
    }
@@ -189,26 +239,26 @@ namespace cycfi::elements
                   {
                      // Process action-select
                      if (btn.down)
-                        r = multi_select(*c, hit, _hook);
+                        r = multi_select(*c, hit, _select_start, _select_end);
                   }
                   else if (_multi_select && (btn.modifiers & mod_shift))
                   {
                      // Process shift-select
                      if (btn.down)
-                        r = shift_select(*c, hit, _hook);
+                        r = shift_select(*c, hit, _select_start, _select_end);
                   }
                   else
                   {
                      // Process select
                      if (!btn.down)
-                        select(*c, hit, _hook);
+                        select(*c, hit, _select_start, _select_end);
                      r = true;
                   }
                }
-               if (r && _hook)
+               if (r && _select_start >= 0)
                {
                   ctx.view.refresh(ctx.bounds);
-                  on_select(_hook);
+                  on_select(_select_start, _select_end);
                }
             }
          );
@@ -239,16 +289,16 @@ namespace cycfi::elements
             {
                if (auto c = find_subject<composite_base*>(this))
                {
-                  if (_hook == -1)
-                     select_last(*c, _hook);
+                  if (_select_start == -1)
+                     select_last(*c, _select_start, _select_end);
                   else
-                     select_prev(*c, _hook, k.modifiers & mod_shift);
-                  if (_hook != -1)
+                     select_prev(*c, _select_start, _select_end, k.modifiers & mod_shift);
+                  if (_select_end != -1)
                   {
                      in_context_do(ctx, *c,
                         [&](context const& cctx)
                         {
-                           scrollable::find(ctx).scroll_into_view(c->bounds_of(cctx, _hook));
+                           scrollable::find(ctx).scroll_into_view(c->bounds_of(cctx, _select_end));
                            ctx.view.refresh(ctx.bounds);
                         }
                      );
@@ -262,16 +312,16 @@ namespace cycfi::elements
             {
                if (auto c = find_subject<composite_base*>(this))
                {
-                  if (_hook == -1)
-                     select_first(*c, _hook);
+                  if (_select_start == -1)
+                     select_first(*c, _select_start, _select_end);
                   else
-                     select_next(*c, _hook, k.modifiers & mod_shift);
-                  if (_hook != -1)
+                     select_next(*c, _select_start, _select_end, k.modifiers & mod_shift);
+                  if (_select_end != -1)
                   {
                      in_context_do(ctx, *c,
                         [&](context const& cctx)
                         {
-                           scrollable::find(ctx).scroll_into_view(c->bounds_of(cctx, _hook));
+                           scrollable::find(ctx).scroll_into_view(c->bounds_of(cctx, _select_end));
                            ctx.view.refresh(ctx.bounds);
                         }
                      );
@@ -301,9 +351,14 @@ namespace cycfi::elements
          return set_selected(*c, selection);
    }
 
-   int selection_list_element::get_hook() const
+   int selection_list_element::get_select_start() const
    {
-      return _hook;
+      return _select_start;
+   }
+
+   int selection_list_element::get_select_end() const
+   {
+      return _select_end;
    }
 
    void selection_list_element::select_all()
@@ -313,7 +368,9 @@ namespace cycfi::elements
          if (auto c = find_subject<composite_base*>(this))
          {
             detail::select_all(*c);
-            on_select(_hook);
+            _select_start = 0;
+            _select_end = c->size()-1;
+            on_select(_select_start, _select_end);
          }
       }
    }
@@ -323,8 +380,8 @@ namespace cycfi::elements
       if (auto c = find_subject<composite_base*>(this))
       {
          detail::select_none(*c);
-         _hook = -1;
-         on_select(_hook);
+         _select_start = _select_end = -1;
+         on_select(_select_start, _select_end);
       }
    }
 }

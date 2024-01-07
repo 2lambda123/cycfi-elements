@@ -39,7 +39,7 @@ namespace cycfi::elements
    public:
 
       using indices_type = std::vector<std::size_t>;
-      using on_select_function = std::function<void(int hook)>;
+      using on_select_function = std::function<void(int select_start, int select_end)>;
       using base_type = proxy_base;
 
                               selection_list_element(bool multi_select = true);
@@ -51,17 +51,19 @@ namespace cycfi::elements
 
       indices_type            get_selection() const;
       void                    set_selection(indices_type const& selection);
-      int                     get_hook() const;
+      int                     get_select_start() const;
+      int                     get_select_end() const;
 
       void                    select_all();
       void                    select_none();
 
-      on_select_function      on_select = [](int){};
+      on_select_function      on_select = [](int, int){};
 
    private:
 
       bool                    _multi_select = false;
-      int                     _hook = -1;
+      int                     _select_start = -1;
+      int                     _select_end = -1;
    };
 
    //==============================================================================================
