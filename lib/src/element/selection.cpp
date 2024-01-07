@@ -26,23 +26,24 @@ namespace cycfi::elements
          return indices;
       }
 
-      void set_selected(composite_base& c, std::vector<std::size_t> const selection)
-      {
-         for (std::size_t i : selection)
-         {
-            if (i > c.size())
-               continue; // Ignore out of bounds indices
-            if (auto e = find_element<selectable*>(&c.at(i)))
-               e->select(selection[i]);
-         }
-      }
-
       void select_none(composite_base const& c)
       {
          for (std::size_t i = 0; i != c.size(); ++i)
          {
             if (auto e = find_element<selectable*>(&c.at(i)))
                e->select(false);
+         }
+      }
+
+      void set_selected(composite_base& c, std::vector<std::size_t> const selection)
+      {
+         select_none(c);
+         for (std::size_t i : selection)
+         {
+            if (i > c.size())
+               continue; // Ignore out of bounds indices
+            if (auto e = find_element<selectable*>(&c.at(i)))
+               e->select(true);
          }
       }
 
