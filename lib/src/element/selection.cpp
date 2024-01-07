@@ -6,6 +6,7 @@
 #include <elements/element/selection.hpp>
 #include <elements/element/composite.hpp>
 #include <elements/element/traversal.hpp>
+#include <elements/element/port.hpp>
 #include <elements/view.hpp>
 
 namespace cycfi::elements
@@ -114,6 +115,60 @@ namespace cycfi::elements
          }
          return false;
       }
+
+      void select_first(composite_base const& c, int& hook)
+      {
+         // We assume that there is no selection to reset
+         if (c.size())
+         {
+            if (auto e = find_element<selectable*>(&c.at(0)))
+            {
+               e->select(true);
+               hook = 0;
+            }
+         }
+      }
+
+      void select_last(composite_base const& c, int& hook)
+      {
+         // We assume that there is no selection to reset
+         if (c.size())
+         {
+            if (auto e = find_element<selectable*>(&c.at(c.size()-1)))
+            {
+               e->select(true);
+               hook = c.size()-1;
+            }
+         }
+      }
+
+      void select_next(composite_base const& c, int& hook, bool shift)
+      {
+         if ((hook+1) < c.size())
+         {
+            if (auto e = find_element<selectable*>(&c.at(hook+1)))
+            {
+               if (!shift)
+                  select_none(c);
+               e->select(true);
+               ++hook;
+            }
+         }
+      }
+
+      void select_prev(composite_base const& c, int& hook, bool shift)
+      {
+         if ((hook-1) >= 0)
+         {
+            if (auto e = find_element<selectable*>(&c.at(hook-1)))
+            {
+               if (!shift)
+                  select_none(c);
+               e->select(true);
+               --hook;
+            }
+         }
+      }
    }
 
    using namespace detail;
@@ -174,12 +229,57 @@ namespace cycfi::elements
                   if (auto c = find_subject<composite_base*>(this))
                   {
                      detail::select_all(*c);
-                     ctx.view.refresh();
+                     ctx.view.refresh(ctx.bounds);
                      return true;
                   }
                }
                break;
 
+            case key_code::up:
+            {
+               if (auto c = find_subject<composite_base*>(this))
+               {
+                  if (_hook == -1)
+                     select_last(*c, _hook);
+                  else
+                     select_prev(*c, _hook, k.modifiers & mod_shift);
+                  if (_hook != -1)
+                  {
+                     in_context_do(ctx, *c,
+                        [&](context const& cctx)
+                        {
+                           scrollable::find(ctx).scroll_into_view(c->bounds_of(cctx, _hook));
+                           ctx.view.refresh(ctx.bounds);
+                        }
+                     );
+                     r = true;
+                  }
+               }
+               break;
+            }
+
+            case key_code::down:
+            {
+               if (auto c = find_subject<composite_base*>(this))
+               {
+                  if (_hook == -1)
+                     select_first(*c, _hook);
+                  else
+                     select_next(*c, _hook, k.modifiers & mod_shift);
+                  if (_hook != -1)
+                  {
+                     in_context_do(ctx, *c,
+                        [&](context const& cctx)
+                        {
+                           scrollable::find(ctx).scroll_into_view(c->bounds_of(cctx, _hook));
+                           ctx.view.refresh(ctx.bounds);
+                        }
+                     );
+                     r = true;
+                  }
+               }
+               break;
+            }
             default:
                break;
          }
@@ -208,10 +308,13 @@ namespace cycfi::elements
 
    void selection_list_element::select_all()
    {
-      if (auto c = find_subject<composite_base*>(this))
+      if (_multi_select)
       {
-         detail::select_all(*c);
-         on_select(_hook);
+         if (auto c = find_subject<composite_base*>(this))
+         {
+            detail::select_all(*c);
+            on_select(_hook);
+         }
       }
    }
 
