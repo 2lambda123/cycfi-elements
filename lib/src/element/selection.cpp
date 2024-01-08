@@ -99,15 +99,21 @@ namespace cycfi::elements
          return n;
       }
 
-      bool multi_select(
+      bool action_select(
          composite_base const& c
        , composite_base::hit_info const& hit
        , int& _select_start
        , int& _select_end
+       , bool _multi_select
       )
       {
          if (auto e = find_element<selectable*>(hit.element_ptr))
          {
+            if (!_multi_select)
+            {
+               if (auto pe = find_element<selectable*>(&c.at(_select_start)); pe && e != pe)
+                  pe->select(false);
+            }
             e->select(!e->is_selected());
             if (e->is_selected())
                _select_start = _select_end = e->is_selected()? hit.index : -1;
@@ -121,7 +127,7 @@ namespace cycfi::elements
       void shift_select(
          composite_base const& c
        , std::size_t index
-       , int const _select_start
+       , int _select_start
        , int& _select_end
       )
       {
@@ -150,7 +156,7 @@ namespace cycfi::elements
       bool shift_select(
          composite_base const& c
        , composite_base::hit_info const& hit
-       , int const _select_start
+       , int _select_start
        , int& _select_end
       )
       {
@@ -235,11 +241,11 @@ namespace cycfi::elements
                auto hit = c->hit_element(cctx, btn.pos, false);
                if (hit.element_ptr)
                {
-                  if (_multi_select && (btn.modifiers & mod_action))
+                  if (btn.modifiers & mod_action)
                   {
                      // Process action-select
                      if (btn.down)
-                        r = multi_select(*c, hit, _select_start, _select_end);
+                        r = action_select(*c, hit, _select_start, _select_end, _multi_select);
                   }
                   else if (_multi_select && (btn.modifiers & mod_shift))
                   {
