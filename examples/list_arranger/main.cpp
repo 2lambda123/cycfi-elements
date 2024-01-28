@@ -9,10 +9,7 @@ using namespace cycfi::elements;
 using cycfi::artist::rgba;
 
 // Main window background
-auto make_bkd()
-{
-    return port(image{"dark-bkd.jpg"});
-}
+auto make_bkd() { return port(image{"dark-bkd.jpg"}); }
 
 // Probably shouldn't be global, but hey, it's a demo. You know what to do :-)
 std::vector<std::filesystem::path> paths = {
@@ -69,78 +66,54 @@ std::vector<std::filesystem::path> paths = {
     "/usr/bin/mystical_encryption_script.rb",
     "/mnt/data/ancient_vibrational_mantras_music.mp3",
     "/opt/software/transdimensional_knowledge_portal.png",
-    "/tmp/temp/mind_expansion_ritual.txt"
-};
+    "/tmp/temp/mind_expansion_ritual.txt"};
 
-int main(int argc, char* argv[])
-{
-    app _app(argc, argv, "Active Dynamic List", "com.cycfi.list-arranger");
-    window _win(_app.name());
-    _win.on_close = [&_app]() {
-        _app.stop();
-    };
+int main(int argc, char *argv[]) {
+   app _app(argc, argv, "Active Dynamic List", "com.cycfi.list-arranger");
+   window _win(_app.name());
+   _win.on_close = [&_app]() { _app.stop(); };
 
-    view view_(_win);
+   view view_(_win);
 
-    size_t list_size = paths.size();
-    auto && make_row = [&](size_t index)
-    {
-        // If we start with an empty paths vector, we still need to give it a prototypical
-        // element in order to establish the size limits.
-        std::string path = paths.empty()? std::string{"Empty"} :
-                           paths[index].u8string();
+   size_t list_size = paths.size();
+   auto &&make_row = [&](size_t index) {
+      // If we start with an empty paths vector, we still need to give it a
+      // prototypical element in order to establish the size limits.
+      std::string path =
+          paths.empty() ? std::string{"Empty"} : paths[index].u8string();
 
-        return share(
-                   (
-                       draggable(
-                           align_left(label(path))
-                       )
-                   )
-               );
-    };
+      return share((draggable(align_left(label(path)))));
+   };
 
-    auto cp = basic_vcell_composer(list_size, make_row);
-    auto list = vlist(cp, false);
-    auto drop_inserter_ = share(
-                              drop_inserter(
-    margin({10, 10, 15, 10}, link(list)),
-    {"text/uri-list"}
-                              )
-                          );
+   auto cp = basic_vcell_composer(list_size, make_row);
+   auto list = vlist(cp, false);
+   auto drop_inserter_ = share(
+       drop_inserter(margin({10, 10, 15, 10}, link(list)), {"text/uri-list"}));
 
-    drop_inserter_->on_drop =
-        [&](drop_info const& info, std::size_t ix)
-    {
-        if (contains_filepaths(info.data))
-        {
-            auto new_paths = get_filepaths(info.data);
-            paths.insert(ix+paths.begin(), new_paths.begin(), new_paths.end());
-            list.insert(ix, new_paths.size());
-            view_.refresh();
-            return true;
-        }
-        return false;
-    };
+   drop_inserter_->on_drop = [&](drop_info const &info, std::size_t ix) {
+      if (contains_filepaths(info.data)) {
+         auto new_paths = get_filepaths(info.data);
+         paths.insert(ix + paths.begin(), new_paths.begin(), new_paths.end());
+         list.insert(ix, new_paths.size());
+         view_.refresh();
+         return true;
+      }
+      return false;
+   };
 
-    drop_inserter_->on_move =
-        [&](std::size_t pos, std::vector<std::size_t> const& indices)
-    {
-        move_indices(paths, pos, indices);
-        view_.refresh();
-    };
+   drop_inserter_->on_move = [&](std::size_t pos,
+                                 std::vector<std::size_t> const &indices) {
+      move_indices(paths, pos, indices);
+      view_.refresh();
+   };
 
-    drop_inserter_->on_erase =
-        [&](std::vector<std::size_t> const& indices)
-    {
-        erase_indices(paths, indices);
-        view_.refresh();
-    };
+   drop_inserter_->on_erase = [&](std::vector<std::size_t> const &indices) {
+      erase_indices(paths, indices);
+      view_.refresh();
+   };
 
-    view_.content(
-        vscroller(align_left_top(hold(drop_inserter_))),
-        make_bkd()
-    );
+   view_.content(vscroller(align_left_top(hold(drop_inserter_))), make_bkd());
 
-    _app.run();
-    return 0;
+   _app.run();
+   return 0;
 }
