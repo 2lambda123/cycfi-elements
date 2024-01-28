@@ -111,262 +111,264 @@ auto background = elements::box(bkd_color);
 // and a value normalized to 0.0 to 1.0.
 struct my_model
 {
-   enum preset
-   {
-      preset_none,
-      preset_100_percent,
-      preset_75_percent,
-      preset_50_percent,
-      preset_25_percent,
-      preset_0_percent,
-   };
+    enum preset
+    {
+        preset_none,
+        preset_100_percent,
+        preset_75_percent,
+        preset_50_percent,
+        preset_25_percent,
+        preset_0_percent,
+    };
 
-   value_model<float>   _value = 1.0;
-   value_model<preset>  _preset = preset_100_percent;
+    value_model<float>   _value = 1.0;
+    value_model<preset>  _preset = preset_100_percent;
 };
 
 // Create a dial and establish its connection with the model.
 auto make_dial(my_model& model, view& view_)
 {
-   // Make a dial
-   auto dial_ptr =
-      share(
-         dial(
-            radial_marks<20>(basic_knob<80>()),
-            1.0
-         )
-      );
+    // Make a dial
+    auto dial_ptr =
+        share(
+            dial(
+                radial_marks<20>(basic_knob<80>()),
+                1.0
+            )
+        );
 
-   // When the user interacts with the dial, this will be called.
-   // We assign the new value to the model.
-   dial_ptr->on_change =
-      [&model](double val)
-      {
-         if (model._value != val)
-         {
+    // When the user interacts with the dial, this will be called.
+    // We assign the new value to the model.
+    dial_ptr->on_change =
+        [&model](double val)
+    {
+        if (model._value != val)
+        {
             model._value = val;
             model._preset = my_model::preset_none;
-         }
-      };
+        }
+    };
 
-   // When a new value is assigned to the model, we want to update
-   // the dial and refresh the view.
-   model._value.on_update(
-      [&view_, dial_ptr](double val)
-      {
-         dial_ptr->value(val);
-         view_.refresh(*dial_ptr);
-      }
-   );
+    // When a new value is assigned to the model, we want to update
+    // the dial and refresh the view.
+    model._value.on_update(
+        [&view_, dial_ptr](double val)
+    {
+        dial_ptr->value(val);
+        view_.refresh(*dial_ptr);
+    }
+    );
 
-   auto control = radial_labels<15>(
-      hold(dial_ptr),
-      0.7,                                // Label font size (relative size)
-      "0", "1", "2", "3", "4",            // Labels
-      "5", "6", "7", "8", "9", "10"
-   );
+    auto control = radial_labels<15>(
+                       hold(dial_ptr),
+                       0.7,                                // Label font size (relative size)
+                       "0", "1", "2", "3", "4",            // Labels
+                       "5", "6", "7", "8", "9", "10"
+                   );
 
-   return align_center_middle(control);
+    return align_center_middle(control);
 }
 
 // Create a preset menu and establish its connection with the model.
 auto make_preset_menu(my_model& model, view& view_)
 {
-   // These are the menu labels
-   static char const* preset_labels[] = {
-         "100 Percent",
-         "75 Percent",
-         "50 Percent",
-         "25 Percent",
-         "0 Percent",
-      };
+    // These are the menu labels
+    static char const* preset_labels[] = {
+        "100 Percent",
+        "75 Percent",
+        "50 Percent",
+        "25 Percent",
+        "0 Percent",
+    };
 
-   // We use a map to associate the menu labels with the preset enumeration.
-   static auto preset_map =
-      std::unordered_map<std::string_view, my_model::preset> {
-         { preset_labels[0], my_model::preset_100_percent  },
-         { preset_labels[1], my_model::preset_75_percent },
-         { preset_labels[2], my_model::preset_50_percent },
-         { preset_labels[3], my_model::preset_25_percent  },
-         { preset_labels[4], my_model::preset_0_percent  }
-      };
+    // We use a map to associate the menu labels with the preset enumeration.
+    static auto preset_map =
+    std::unordered_map<std::string_view, my_model::preset> {
+        { preset_labels[0], my_model::preset_100_percent  },
+        { preset_labels[1], my_model::preset_75_percent },
+        { preset_labels[2], my_model::preset_50_percent },
+        { preset_labels[3], my_model::preset_25_percent  },
+        { preset_labels[4], my_model::preset_0_percent  }
+    };
 
-   // We make a selection menu.
-   auto preset_menu =
-      selection_menu(
-         [&model](std::string_view select_str)
-         {
-            // This is called when the user selects an item in the menu.
+    // We make a selection menu.
+    auto preset_menu =
+        selection_menu(
+            [&model](std::string_view select_str)
+    {
+        // This is called when the user selects an item in the menu.
 
-            // Convert the selected menu item to the preset enumeration.
-            auto select = preset_map[select_str];
+        // Convert the selected menu item to the preset enumeration.
+        auto select = preset_map[select_str];
 
-            // Set the model's preset
-            model._preset = select;
+        // Set the model's preset
+        model._preset = select;
 
-            // Set the value of the model accordingly.
-            switch (select)
-            {
-               case my_model::preset_100_percent:
-                  model._value = 1.0;
-                  break;
-               case my_model::preset_75_percent:
-                  model._value = 0.75;
-                  break;
-               case my_model::preset_50_percent:
-                  model._value = 0.5;
-                  break;
-               case my_model::preset_25_percent:
-                  model._value = 0.25;
-                  break;
-               case my_model::preset_0_percent:
-                  model._value = 0.0;
-                  break;
-               default:
-                  break;
-            };
-         },
-         preset_labels
-      );
+        // Set the value of the model accordingly.
+        switch (select)
+        {
+        case my_model::preset_100_percent:
+            model._value = 1.0;
+            break;
+        case my_model::preset_75_percent:
+            model._value = 0.75;
+            break;
+        case my_model::preset_50_percent:
+            model._value = 0.5;
+            break;
+        case my_model::preset_25_percent:
+            model._value = 0.25;
+            break;
+        case my_model::preset_0_percent:
+            model._value = 0.0;
+            break;
+        default:
+            break;
+        };
+    },
+    preset_labels
+        );
 
-   // When a new preset is assigned to the model, we want to update
-   // the menu text and refresh the view.
-   model._preset.on_update(
-      [&view_, label = preset_menu.second, &model](my_model::preset val)
-      {
-         if (val == my_model::preset_none)
-         {
+    // When a new preset is assigned to the model, we want to update
+    // the menu text and refresh the view.
+    model._preset.on_update(
+        [&view_, label = preset_menu.second, &model](my_model::preset val)
+    {
+        if (val == my_model::preset_none)
+        {
             // Prepend '*' to the string to indicate that it is being edited.
             auto text = label->get_text();
             if (text[0] != '*')
-               label->set_text("*" + std::string{text});
-         }
-         else
-         {
+                label->set_text("*" + std::string{text});
+        }
+        else
+        {
             label->set_text(preset_labels[int(val)-1]);
-         }
-         view_.refresh(*label);
-      }
-   );
+        }
+        view_.refresh(*label);
+    }
+    );
 
-   return align_center(
-            hsize(180,
-               htile(
-                  label("Preset:"),
-                  hspace(10),
-                  preset_menu.first
-               )
-            )
-         );
+    return align_center(
+               hsize(180,
+                     htile(
+                         label("Preset:"),
+                         hspace(10),
+                         preset_menu.first
+                     )
+                    )
+           );
 }
 
 // Create an input text box and establish its connection with the model.
 auto make_input_box(my_model& model, view& view_)
 {
-   auto tbox = input_box("value");
+    auto tbox = input_box("value");
 
-   // When a new value is assigned to the model, we want to update
-   // the input text box and refresh the view.
-   model._value.on_update(
-      [&view_, input = tbox.second](double val)
-      {
-         input->set_text(std::to_string(val));
-         input->select_all();
-         view_.refresh(*input);
-      }
-   );
+    // When a new value is assigned to the model, we want to update
+    // the input text box and refresh the view.
+    model._value.on_update(
+        [&view_, input = tbox.second](double val)
+    {
+        input->set_text(std::to_string(val));
+        input->select_all();
+        view_.refresh(*input);
+    }
+    );
 
-   // When the user presses the enter key, we'll convert the text to a number and then update the
-   // model with the new value. We will deal with input validation and bring up a message box when
-   // errors are encountered.
-   tbox.second->on_enter =
-      [&model, &view_](std::string_view text)
-      {
-         std::string::size_type pos;
-         std::string error{""};
-         double val;
+    // When the user presses the enter key, we'll convert the text to a number and then update the
+    // model with the new value. We will deal with input validation and bring up a message box when
+    // errors are encountered.
+    tbox.second->on_enter =
+        [&model, &view_](std::string_view text)
+    {
+        std::string::size_type pos;
+        std::string error{""};
+        double val;
 
-         try
-         {
+        try
+        {
             val = std::stod(std::string{text}, &pos);
-         }
-         catch(std::invalid_argument const& e)
-         {
+        }
+        catch(std::invalid_argument const& e)
+        {
             error = "Illegal characters in input.";
-         }
+        }
 
-         if (pos != text.size())
-         {
+        if (pos != text.size())
+        {
             error = "Illegal characters in input.";
-         }
-         else if (val < 0.0 || val > 1.0)
-         {
+        }
+        else if (val < 0.0 || val > 1.0)
+        {
             error =
-               "Number is out of range. "
-               "Expected range is from 0.0 to 1.0."
-               ;
-         }
-         else
-         {
+                "Number is out of range. "
+                "Expected range is from 0.0 to 1.0."
+                ;
+        }
+        else
+        {
             model._value = val;
             model._preset = my_model::preset_none;
-         }
+        }
 
-         if (error != "")
-         {
+        if (error != "")
+        {
             auto&& on_ok =
-               [&model]()
-               {
-                  // When errors are enountered, reset the model's value to its previous state.
-                  model._value.update();
-               };
+                [&model]()
+            {
+                // When errors are enountered, reset the model's value to its previous state.
+                model._value.update();
+            };
 
             // Bring up a message box.
             auto popup = message_box1(view_, error, icons::attention, on_ok);
             view_.add(popup);
-         }
-      };
+        }
+    };
 
-   return align_center(hsize(70, tbox.first));
+    return align_center(hsize(70, tbox.first));
 }
 
 // Finally, we have our main content.
 auto make_content(my_model& model, view& view_)
 {
-   static float const grid_coords[] = {0.1, 0.9, 1.0};
+    static float const grid_coords[] = {0.1, 0.9, 1.0};
 
-   return
-      margin({20, 20, 20, 20},
-         group(
-            margin({20, 20, 20, 20},
-               vgrid(grid_coords,
-                  make_preset_menu(model, view_),
-                  make_dial(model, view_),
-                  make_input_box(model, view_)
+    return
+        margin({20, 20, 20, 20},
+               group(
+                   margin({20, 20, 20, 20},
+                          vgrid(grid_coords,
+                                make_preset_menu(model, view_),
+                                make_dial(model, view_),
+                                make_input_box(model, view_)
+                               )
+                         )
                )
-            )
-         )
-      );
+              );
 }
 
 int main(int argc, char* argv[])
 {
-   app _app(argc, argv, "Model", "com.cycfi.model");
-   window _win(_app.name());
-   _win.on_close = [&_app]() { _app.stop(); };
+    app _app(argc, argv, "Model", "com.cycfi.model");
+    window _win(_app.name());
+    _win.on_close = [&_app]() {
+        _app.stop();
+    };
 
-   view view_(_win);
+    view view_(_win);
 
-   // Our simple model
-   my_model model;
+    // Our simple model
+    my_model model;
 
-   view_.content(
-      make_content(model, view_),
-      background
-   );
+    view_.content(
+        make_content(model, view_),
+        background
+    );
 
-   model._value = 1.0;
+    model._value = 1.0;
 
-   _app.run();
-   return 0;
+    _app.run();
+    return 0;
 }
